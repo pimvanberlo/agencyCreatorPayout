@@ -136,7 +136,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async listPaymentRequests(limit = 50, offset = 0, status?: string): Promise<PaymentRequest[]> {
-    let query = db
+    const baseQuery = db
       .select()
       .from(paymentRequests)
       .orderBy(desc(paymentRequests.createdAt))
@@ -144,10 +144,10 @@ export class DatabaseStorage implements IStorage {
       .offset(offset);
 
     if (status) {
-      query = query.where(eq(paymentRequests.status, status));
+      return await baseQuery.where(eq(paymentRequests.status, status));
     }
 
-    return await query;
+    return await baseQuery;
   }
 
   async getPaymentRequestsWithCreators(): Promise<(PaymentRequest & { creator: Creator })[]> {
