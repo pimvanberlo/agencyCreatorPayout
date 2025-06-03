@@ -219,6 +219,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/creators/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const creator = await storage.getCreator(id);
+      
+      if (!creator) {
+        return res.status(404).json({ message: 'Creator not found' });
+      }
+
+      const updates = req.body;
+      const updatedCreator = await storage.updateCreator(id, updates);
+      res.json(updatedCreator);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || 'Failed to update creator' });
+    }
+  });
+
   app.get('/api/creators', async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
