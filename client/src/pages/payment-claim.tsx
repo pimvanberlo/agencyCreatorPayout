@@ -16,7 +16,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { formatCurrency, calculateVAT, VAT_RATES } from "@/lib/vat-utils";
+import { formatCurrency, calculateVAT, VAT_RATES } from "@shared/vat-utils";
 import { 
   CheckCircle, 
   AlertCircle, 

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Euro, Users, Clock, CheckCircle, Search, Filter, Download, Send } from "lucide-react";
-import { formatCurrency } from "@/lib/vat-utils";
+import { formatCurrency } from "@shared/vat-utils";
 import { formatDistanceToNow } from "date-fns";
 
 interface DashboardStats {

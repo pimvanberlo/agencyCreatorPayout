@@ -14,7 +14,7 @@ import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { VAT_RATES } from "@/lib/vat-utils";
+import { VAT_RATES } from "@shared/vat-utils";
 
 const businessDetailsSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),

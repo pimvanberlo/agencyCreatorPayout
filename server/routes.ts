@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertCreatorSchema, insertPaymentRequestSchema } from "@shared/schema";
+import { calculateVAT } from "@shared/vat-utils";
 import Stripe from "stripe";
 import { nanoid } from "nanoid";
 import multer from "multer";
@@ -32,34 +33,7 @@ const upload = multer({
   },
 });
 
-// VAT calculation utility
-function calculateVAT(amount: number, country: string, businessType: string) {
-  const vatRates: Record<string, number> = {
-    'NL': 21, // Netherlands
-    'DE': 19, // Germany
-    'FR': 20, // France
-    'BE': 21, // Belgium
-    'ES': 21, // Spain
-    'IT': 22, // Italy
-    'UK': 20, // United Kingdom
-    'US': 0,  // United States
-  };
 
-  // EU VAT reverse charge for VAT registered businesses
-  if (businessType === 'vat_registered' && vatRates[country] && country !== 'NL') {
-    return { rate: 0, amount: 0 }; // Reverse charge - 0% VAT
-  }
-
-  // VAT exempt businesses
-  if (businessType === 'vat_exempt') {
-    return { rate: 0, amount: 0 };
-  }
-
-  const rate = vatRates[country] || 0;
-  const vatAmount = (amount * rate) / 100;
-
-  return { rate, amount: vatAmount };
-}
 
 // Gemini AI validation (mock implementation)
 async function validateInvoiceWithAI(filePath: string, expectedAmount: number) {

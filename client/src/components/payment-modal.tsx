@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { calculateVAT, formatCurrency } from "@/lib/vat-utils";
+import { calculateVAT, formatCurrency } from "@shared/vat-utils";
 import { CheckCircle, X } from "lucide-react";
 
 const paymentSchema = z.object({
