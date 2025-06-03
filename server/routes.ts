@@ -254,18 +254,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const creator = await storage.getCreator(id);
       
-      if (!creator || !creator.stripeAccountId) {
-        return res.status(404).json({ message: 'Creator or Stripe account not found' });
+      if (!creator) {
+        return res.status(404).json({ message: 'Creator not found' });
       }
 
-      const accountLink = await stripe.accountLinks.create({
-        account: creator.stripeAccountId,
-        refresh_url: `${req.protocol}://${req.get('host')}/creator-onboarding?refresh=true`,
-        return_url: `${req.protocol}://${req.get('host')}/creator-onboarding?success=true`,
-        type: 'account_onboarding',
-      });
+      // Generate onboarding URL that takes creator to business details form
+      const onboardingUrl = `${req.protocol}://${req.get('host')}/creator-onboarding?creator=${id}`;
 
-      res.json({ url: accountLink.url });
+      res.json({ url: onboardingUrl });
     } catch (error: any) {
       res.status(500).json({ message: error.message || 'Failed to create onboarding link' });
     }
