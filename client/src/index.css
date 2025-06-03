@@ -1,0 +1,255 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Primary Colors - Custom green theme */
+  --primary: 134 83% 48%; /* #28ce73 */
+  --primary-foreground: 0 0% 100%; /* white */
+  
+  /* Background Colors */
+  --background: 0 0% 96%; /* #f5f5f5 */
+  --foreground: 0 0% 0%; /* #000000 */
+  
+  /* Card and Surface Colors */
+  --card: 0 0% 100%; /* #ffffff */
+  --card-foreground: 0 0% 0%; /* #000000 */
+  
+  /* Muted Colors */
+  --muted: 210 40% 98%;
+  --muted-foreground: 215 13% 45%; /* #6b7280 */
+  
+  /* Popover Colors */
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 0%;
+  
+  /* Secondary Colors */
+  --secondary: 210 40% 98%;
+  --secondary-foreground: 0 0% 0%;
+  
+  /* Accent Colors */
+  --accent: 210 40% 98%;
+  --accent-foreground: 0 0% 0%;
+  
+  /* Destructive Colors */
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+  
+  /* Border and Input Colors */
+  --border: 214 32% 91%; /* #e5e7eb */
+  --input: 214 32% 91%;
+  --ring: 134 83% 48%; /* #28ce73 */
+  
+  /* Status Colors */
+  --status-pending: 43 96% 56%; /* #f59e0b */
+  --status-success: 142 76% 36%; /* #10b981 */
+  --status-error: 0 84% 60%; /* #ef4444 */
+  --status-claimed: 217 91% 60%; /* #3b82f6 */
+  
+  /* Chart Colors */
+  --chart-1: 12 76% 61%;
+  --chart-2: 173 58% 39%;
+  --chart-3: 197 37% 24%;
+  --chart-4: 43 74% 66%;
+  --chart-5: 27 87% 67%;
+  
+  /* Sidebar Colors */
+  --sidebar-background: 0 0% 98%;
+  --sidebar-foreground: 240 5% 34%;
+  --sidebar-primary: 134 83% 48%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 216 12% 84%;
+  --sidebar-accent-foreground: 240 5% 26%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-ring: 217 10% 64%;
+  
+  --radius: 0.5rem;
+}
+
+.dark {
+  /* Dark theme - keeping consistent with light theme colors but inverted */
+  --background: 224 71% 4%;
+  --foreground: 213 31% 91%;
+  --muted: 223 47% 11%;
+  --muted-foreground: 215 14% 65%;
+  --accent: 216 34% 17%;
+  --accent-foreground: 210 40% 98%;
+  --popover: 224 71% 4%;
+  --popover-foreground: 215 20% 65%;
+  --border: 216 34% 17%;
+  --input: 216 34% 17%;
+  --card: 224 71% 4%;
+  --card-foreground: 213 31% 91%;
+  --primary: 134 83% 48%; /* Keep green consistent */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 223 47% 11%;
+  --secondary-foreground: 210 40% 98%;
+  --destructive: 0 63% 31%;
+  --destructive-foreground: 210 40% 98%;
+  --ring: 134 83% 48%;
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+}
+
+@layer components {
+  /* Custom utility classes for the payout system */
+  .status-pending {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+  
+  .status-claimed {
+    @apply bg-blue-100 text-blue-800;
+  }
+  
+  .status-paid {
+    @apply bg-green-100 text-green-800;
+  }
+  
+  .status-failed {
+    @apply bg-red-100 text-red-800;
+  }
+  
+  /* Primary button override to match design */
+  .btn-primary {
+    @apply bg-[#28ce73] hover:bg-[#22b366] text-white font-medium transition-colors;
+  }
+  
+  /* Card hover effects */
+  .card-hover {
+    @apply transition-shadow duration-200 hover:shadow-md;
+  }
+  
+  /* Table row hover */
+  .table-row-hover {
+    @apply hover:bg-gray-50 transition-colors;
+  }
+  
+  /* Focus states matching the green theme */
+  .focus-primary {
+    @apply focus:ring-2 focus:ring-[#28ce73] focus:border-transparent;
+  }
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(40, 206, 115, 0.4); }
+  50% { box-shadow: 0 0 0 10px rgba(40, 206, 115, 0); }
+}
+
+/* Utility animations */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.3s ease-out;
+}
+
+.animate-pulse-green {
+  animation: pulse-green 2s infinite;
+}
+
+/* Typography improvements */
+.text-balance {
+  text-wrap: balance;
+}
+
+/* Loading states */
+.loading-shimmer {
+  background: linear-gradient(90deg, 
+    hsl(var(--muted)) 25%, 
+    hsl(var(--muted-foreground) / 0.1) 50%, 
+    hsl(var(--muted)) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Print styles for invoices */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-break {
+    page-break-before: always;
+  }
+  
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 640px) {
+  .mobile-stack {
+    @apply flex-col space-y-2 space-x-0;
+  }
+  
+  .mobile-full {
+    @apply w-full;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --border: 0 0% 50%;
+    --ring: 134 83% 35%;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
