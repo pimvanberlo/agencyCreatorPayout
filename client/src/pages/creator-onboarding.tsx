@@ -1,9 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, AlertCircle, ExternalLink, Users, CreditCard, FileText, Globe } from "lucide-react";
+import { CheckCircle, AlertCircle, ExternalLink, Users, CreditCard, FileText, Globe, ArrowRight, Building, MapPin } from "lucide-react";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { VAT_RATES } from "@/lib/vat-utils";
+
+const businessDetailsSchema = z.object({
+  companyName: z.string().min(1, "Company name is required"),
+  businessType: z.enum(["individual", "company"], {
+    required_error: "Please select your business type",
+  }),
+  country: z.string().min(1, "Country is required"),
+  address: z.string().min(1, "Address is required"),
+  city: z.string().min(1, "City is required"),
+  postalCode: z.string().min(1, "Postal code is required"),
+  vatNumber: z.string().optional(),
+  invoiceMethod: z.enum(["upload", "generate"], {
+    required_error: "Please select an invoice method",
+  }),
+});
+
+type BusinessDetailsFormData = z.infer<typeof businessDetailsSchema>;
 
 export default function CreatorOnboarding() {
   const [location] = useLocation();
@@ -11,6 +39,73 @@ export default function CreatorOnboarding() {
   const success = urlParams.get('success');
   const refresh = urlParams.get('refresh');
   const creatorId = urlParams.get('creator');
+  const token = urlParams.get('token');
+  
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const form = useForm<BusinessDetailsFormData>({
+    resolver: zodResolver(businessDetailsSchema),
+    defaultValues: {
+      companyName: "",
+      businessType: "individual",
+      country: "",
+      address: "",
+      city: "",
+      postalCode: "",
+      vatNumber: "",
+      invoiceMethod: "generate",
+    },
+  });
+
+  // Check if creator exists and load their data
+  const { data: creator } = useQuery({
+    queryKey: [`/api/creators/${creatorId}`],
+    enabled: !!creatorId,
+  });
+
+  useEffect(() => {
+    if (creator && creator.companyName) {
+      // If creator already has business details, skip to Stripe setup
+      setCurrentStep(2);
+    }
+  }, [creator]);
+
+  const updateCreatorMutation = useMutation({
+    mutationFn: async (data: BusinessDetailsFormData) => {
+      const response = await apiRequest("PATCH", `/api/creators/${creatorId}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Business details saved",
+        description: "Your information has been saved successfully.",
+      });
+      setCurrentStep(2);
+      queryClient.invalidateQueries({ queryKey: [`/api/creators/${creatorId}`] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save business details",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmitBusinessDetails = (data: BusinessDetailsFormData) => {
+    if (!creatorId) {
+      toast({
+        title: "Error",
+        description: "Creator ID is missing from the URL",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateCreatorMutation.mutate(data);
+  };
 
   const features = [
     {
@@ -38,24 +133,18 @@ export default function CreatorOnboarding() {
   const steps = [
     {
       number: 1,
-      title: "Basic Information",
-      description: "Provide your personal or business details",
-      status: "completed"
+      title: "Business Details",
+      description: "Provide your company information and VAT details",
+      status: currentStep === 1 ? "current" : currentStep > 1 ? "completed" : "pending"
     },
     {
       number: 2,
-      title: "VAT & Tax Setup",
-      description: "Configure VAT settings based on your location",
-      status: "completed"
+      title: "Stripe Account",
+      description: "Create your secure payment account",
+      status: currentStep === 2 ? "current" : success ? "completed" : "pending"
     },
     {
       number: 3,
-      title: "Stripe Account",
-      description: "Create your secure payment account",
-      status: success ? "completed" : "current"
-    },
-    {
-      number: 4,
       title: "Ready to Receive",
       description: "Start receiving payments from your clients",
       status: success ? "current" : "pending"
