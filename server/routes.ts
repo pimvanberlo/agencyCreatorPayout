@@ -104,6 +104,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Quick creator creation (admin only - just email and name)
+  app.post('/api/creators/quick-create', isAuthenticated, async (req, res) => {
+    try {
+      const { fullName, email } = req.body;
+      
+      if (!fullName || !email) {
+        return res.status(400).json({ message: 'Full name and email are required' });
+      }
+
+      // Check if creator with this email already exists
+      const existingCreator = await storage.getCreatorByEmail(email);
+      if (existingCreator) {
+        return res.status(400).json({ message: 'Creator with this email already exists' });
+      }
+
+      // Create partial creator record with defaults
+      const creator = await storage.createCreator({
+        fullName,
+        email,
+        country: 'NL', // Default, will be updated during onboarding
+        businessType: 'individual', // Default, will be updated during onboarding
+        invoiceMethod: 'auto', // Default, will be updated during onboarding
+      });
+
+      // Generate onboarding URL
+      const onboardingUrl = `${req.protocol}://${req.get('host')}/onboarding?creator=${creator.id}`;
+
+      res.json({ 
+        creator,
+        onboardingUrl 
+      });
+    } catch (error: any) {
+      console.error('Error creating creator:', error);
+      res.status(500).json({ message: error.message || 'Failed to create creator' });
+    }
+  });
+
   // Creator routes
   app.post('/api/creators', async (req, res) => {
     try {
