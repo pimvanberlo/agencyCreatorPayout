@@ -4,9 +4,10 @@ import { CreditCard, Plus, Bell, User } from "lucide-react";
 
 interface NavigationProps {
   onNewPayment: () => void;
+  onNewCreator?: () => void;
 }
 
-export function Navigation({ onNewPayment }: NavigationProps) {
+export function Navigation({ onNewPayment, onNewCreator }: NavigationProps) {
   const [location] = useLocation();
 
   const isActive = (path: string) => location === path;
@@ -29,27 +30,6 @@ export function Navigation({ onNewPayment }: NavigationProps) {
                   : "text-gray-600 hover:text-black"
               }`}>
                 Dashboard
-              </Link>
-              <Link href="/creators" className={`pb-4 font-medium ${
-                isActive("/creators") 
-                  ? "text-black border-b-2 border-[#28ce73]" 
-                  : "text-gray-600 hover:text-black"
-              }`}>
-                Creators
-              </Link>
-              <Link href="/payments" className={`pb-4 font-medium ${
-                isActive("/payments") 
-                  ? "text-black border-b-2 border-[#28ce73]" 
-                  : "text-gray-600 hover:text-black"
-              }`}>
-                Payments
-              </Link>
-              <Link href="/onboarding" className={`pb-4 font-medium ${
-                isActive("/onboarding") 
-                  ? "text-black border-b-2 border-[#28ce73]" 
-                  : "text-gray-600 hover:text-black"
-              }`}>
-                Onboarding
               </Link>
             </div>
           </div>
