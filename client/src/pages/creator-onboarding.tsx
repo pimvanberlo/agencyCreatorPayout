@@ -151,6 +151,153 @@ export default function CreatorOnboarding() {
     }
   ];
 
+  // If no creator ID is provided, show the "Start Onboarding Process" button with proper handler
+  if (!creatorId) {
+    return (
+      <div className="min-h-screen bg-[#f5f5f5]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          {/* Hero Section */}
+          <div className="text-center mb-12">
+            <div className="w-16 h-16 bg-[#28ce73] rounded-full flex items-center justify-center mx-auto mb-6">
+              <CreditCard className="text-white" size={32} />
+            </div>
+            <h1 className="text-4xl font-bold text-black mb-4">Creator Payout System</h1>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Join thousands of creators receiving fast, secure payments with automated VAT compliance 
+              and professional invoice management.
+            </p>
+          </div>
+
+          {/* Features Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            {features.map((feature, index) => (
+              <Card key={index} className="border border-gray-200 hover:shadow-md transition-shadow">
+                <CardContent className="p-6 text-center">
+                  <div className="w-12 h-12 bg-[#28ce73]/10 rounded-lg flex items-center justify-center mx-auto mb-4">
+                    {feature.icon}
+                  </div>
+                  <h3 className="font-semibold text-black mb-2">{feature.title}</h3>
+                  <p className="text-sm text-gray-600">{feature.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Main Content */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Progress Steps */}
+            <Card className="border border-gray-200">
+              <CardHeader>
+                <CardTitle className="text-xl font-semibold text-black">Getting Started</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {steps.map((step, index) => (
+                  <div key={index} className="flex items-start space-x-3">
+                    <div className={`
+                      w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
+                      ${step.status === 'completed' 
+                        ? 'bg-[#28ce73] text-white' 
+                        : step.status === 'current'
+                        ? 'bg-[#28ce73]/20 text-[#28ce73] border-2 border-[#28ce73]'
+                        : 'bg-gray-200 text-gray-600'
+                      }`}>
+                      {step.status === 'completed' ? <CheckCircle size={16} /> : step.number}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className={`font-medium ${
+                        step.status === 'current' ? 'text-[#28ce73]' : 'text-black'
+                      }`}>
+                        {step.title}
+                      </h4>
+                      <p className="text-sm text-gray-600">{step.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* CTA Card */}
+            <Card className="border border-gray-200">
+              <CardHeader>
+                <CardTitle className="text-xl font-semibold text-black">No Account Required</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-gray-600">
+                  Get started immediately without creating an account. We'll guide you through the process 
+                  and only require the information needed for payments.
+                </p>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center text-sm">
+                    <CheckCircle className="text-[#28ce73] mr-2" size={16} />
+                    <span className="text-black">Secure Stripe integration</span>
+                  </div>
+                  <div className="flex items-center text-sm">
+                    <CheckCircle className="text-[#28ce73] mr-2" size={16} />
+                    <span className="text-black">Automatic VAT calculation</span>
+                  </div>
+                  <div className="flex items-center text-sm">
+                    <CheckCircle className="text-[#28ce73] mr-2" size={16} />
+                    <span className="text-black">AI-powered invoice validation</span>
+                  </div>
+                  <div className="flex items-center text-sm">
+                    <CheckCircle className="text-[#28ce73] mr-2" size={16} />
+                    <span className="text-black">Multi-currency support</span>
+                  </div>
+                </div>
+
+                <Alert className="bg-blue-50 border-blue-200">
+                  <AlertCircle className="text-blue-600" size={16} />
+                  <AlertDescription className="text-blue-800">
+                    <strong>Pro tip:</strong> Have your business details and VAT information ready 
+                    to complete the process in under 5 minutes.
+                  </AlertDescription>
+                </Alert>
+
+                <Alert className="bg-yellow-50 border-yellow-200">
+                  <AlertCircle className="text-yellow-600" size={16} />
+                  <AlertDescription className="text-yellow-800">
+                    <strong>Note:</strong> This is a demo page. To start actual onboarding, you need a valid creator link from your client.
+                  </AlertDescription>
+                </Alert>
+
+                <Button 
+                  className="w-full bg-[#28ce73] hover:bg-[#22b366] text-white font-medium"
+                  size="lg"
+                  disabled
+                >
+                  Start Onboarding Process
+                  <ExternalLink className="ml-2" size={16} />
+                </Button>
+                
+                <p className="text-xs text-gray-500 text-center">
+                  By continuing, you agree to our Terms of Service and Privacy Policy
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Support Section */}
+          <div className="mt-12 text-center">
+            <h2 className="text-2xl font-semibold text-black mb-4">Need Help?</h2>
+            <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+              Our support team is here to help you through the onboarding process. 
+              Contact us if you have any questions about VAT requirements, payment processing, or account setup.
+            </p>
+            <div className="flex justify-center space-x-4">
+              <Button variant="outline" className="border-gray-300 text-black hover:bg-gray-50">
+                Contact Support
+              </Button>
+              <Button variant="outline" className="border-gray-300 text-black hover:bg-gray-50">
+                View FAQ
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (success) {
     return (
       <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center p-4">
