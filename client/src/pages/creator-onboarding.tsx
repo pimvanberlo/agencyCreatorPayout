@@ -10,6 +10,7 @@ export default function CreatorOnboarding() {
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
   const success = urlParams.get('success');
   const refresh = urlParams.get('refresh');
+  const creatorId = urlParams.get('creator');
 
   const features = [
     {

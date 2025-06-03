@@ -27,15 +27,51 @@ function Router() {
     );
   }
 
-  if (!isAuthenticated) {
-    return (
-      <Switch>
-        {/* Public routes */}
-        <Route path="/onboarding" component={CreatorOnboarding} />
-        <Route path="/claim/:token" component={PaymentClaim} />
-        
-        {/* Landing page for non-authenticated users */}
-        <Route>
+  // Public routes (always available regardless of auth status)
+  return (
+    <Switch>
+      {/* Public creator onboarding and payment claim routes */}
+      <Route path="/onboarding" component={CreatorOnboarding} />
+      <Route path="/claim/:token" component={PaymentClaim} />
+      
+      {/* Admin panel routes (protected) */}
+      {isAuthenticated ? (
+        <Route path="/">
+          <div className="min-h-screen bg-[#f5f5f5]">
+            <Navigation onNewPayment={() => setPaymentModalOpen(true)} />
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <Switch>
+                <Route path="/" component={Dashboard} />
+                <Route path="/creators">
+                  <div className="text-center py-12">
+                    <h1 className="text-2xl font-bold text-black mb-4">Creator Management</h1>
+                    <p className="text-gray-600 mb-6">Manage your creator network and onboarding.</p>
+                    <button
+                      onClick={() => setCreatorModalOpen(true)}
+                      className="bg-[#28ce73] hover:bg-[#22b366] text-white px-6 py-3 rounded-lg font-medium"
+                    >
+                      Onboard New Creator
+                    </button>
+                  </div>
+                </Route>
+                <Route path="/payments">
+                  <div className="text-center py-12">
+                    <h1 className="text-2xl font-bold text-black mb-4">Payment Management</h1>
+                    <p className="text-gray-600">Advanced payment processing and bulk operations.</p>
+                  </div>
+                </Route>
+                <Route component={NotFound} />
+              </Switch>
+            </main>
+            
+            {/* Modals */}
+            <PaymentModal open={paymentModalOpen} onOpenChange={setPaymentModalOpen} />
+            <CreatorModal open={creatorModalOpen} onOpenChange={setCreatorModalOpen} />
+          </div>
+        </Route>
+      ) : (
+        /* Landing page for non-authenticated admin users */
+        <Route path="/">
           <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5]">
             <div className="max-w-md w-full mx-4">
               <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
@@ -46,7 +82,7 @@ function Router() {
                 </div>
                 <h1 className="text-2xl font-bold text-black mb-4">Creator Payout System</h1>
                 <p className="text-gray-600 mb-6">
-                  Streamlined creator payments with automated VAT compliance and Stripe integration.
+                  Admin panel for managing creator payments with automated VAT compliance.
                 </p>
                 <a
                   href="/api/login"
@@ -54,55 +90,12 @@ function Router() {
                 >
                   Admin Login
                 </a>
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <p className="text-sm text-gray-600 mb-3">Are you a creator?</p>
-                  <a
-                    href="/onboarding"
-                    className="text-[#28ce73] hover:text-[#22b366] font-medium"
-                  >
-                    Get started with onboarding →
-                  </a>
-                </div>
               </div>
             </div>
           </div>
         </Route>
-      </Switch>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-[#f5f5f5]">
-      <Navigation onNewPayment={() => setPaymentModalOpen(true)} />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Switch>
-          <Route path="/" component={Dashboard} />
-          <Route path="/creators">
-            <div className="text-center py-12">
-              <h1 className="text-2xl font-bold text-black mb-4">Creator Management</h1>
-              <p className="text-gray-600 mb-6">Manage your creator network and onboarding.</p>
-              <button
-                onClick={() => setCreatorModalOpen(true)}
-                className="bg-[#28ce73] hover:bg-[#22b366] text-white px-6 py-3 rounded-lg font-medium"
-              >
-                Onboard New Creator
-              </button>
-            </div>
-          </Route>
-          <Route path="/payments">
-            <div className="text-center py-12">
-              <h1 className="text-2xl font-bold text-black mb-4">Payment Management</h1>
-              <p className="text-gray-600">Advanced payment processing and bulk operations.</p>
-            </div>
-          </Route>
-          <Route component={NotFound} />
-        </Switch>
-      </main>
-      
-      {/* Modals */}
-      <PaymentModal open={paymentModalOpen} onOpenChange={setPaymentModalOpen} />
-      <CreatorModal open={creatorModalOpen} onOpenChange={setCreatorModalOpen} />
-    </div>
+      )}
+    </Switch>
   );
 }
 
