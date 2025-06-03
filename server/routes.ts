@@ -14,7 +14,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
+  apiVersion: "2024-12-18.acacia",
 });
 
 // File upload configuration
@@ -128,8 +128,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         invoiceMethod: 'auto', // Default, will be updated during onboarding
       });
 
+      // Create Stripe Express account for the creator
+      const account = await stripe.accounts.create({
+        type: 'express',
+        country: 'NL', // Default to Netherlands, will be updated during onboarding
+        email: email,
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        business_type: 'individual', // Default, will be updated during onboarding
+      });
+
+      // Update creator with Stripe account ID
+      await storage.updateCreator(creator.id, {
+        stripeAccountId: account.id,
+      });
+
       // Generate onboarding URL
-      const onboardingUrl = `${req.protocol}://${req.get('host')}/onboarding?creator=${creator.id}`;
+      const onboardingUrl = `${req.protocol}://${req.get('host')}/creator-onboarding?creator=${creator.id}`;
 
       res.json({ 
         creator,
@@ -229,6 +246,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updates = req.body;
+      
+      // If updating business details and Stripe account exists, update Stripe account
+      if (creator.stripeAccountId && (updates.country || updates.businessType || updates.companyName)) {
+        await stripe.accounts.update(creator.stripeAccountId, {
+          ...(updates.country && { country: updates.country }),
+          ...(updates.businessType && { 
+            business_type: updates.businessType === 'individual' ? 'individual' : 'company' 
+          }),
+          ...(updates.companyName && {
+            company: { name: updates.companyName }
+          }),
+        });
+      }
+
       const updatedCreator = await storage.updateCreator(id, updates);
       res.json(updatedCreator);
     } catch (error: any) {
@@ -264,6 +295,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ url: onboardingUrl });
     } catch (error: any) {
       res.status(500).json({ message: error.message || 'Failed to create onboarding link' });
+    }
+  });
+
+  // Create Stripe Connect onboarding link after business details are completed
+  app.get('/api/creators/:id/stripe-onboard', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const creator = await storage.getCreator(id);
+      
+      if (!creator || !creator.stripeAccountId) {
+        return res.status(404).json({ message: 'Creator or Stripe account not found' });
+      }
+
+      const accountLink = await stripe.accountLinks.create({
+        account: creator.stripeAccountId,
+        refresh_url: `${req.protocol}://${req.get('host')}/creator-onboarding?refresh=true&creator=${id}`,
+        return_url: `${req.protocol}://${req.get('host')}/creator-onboarding?success=true&creator=${id}`,
+        type: 'account_onboarding',
+      });
+
+      res.redirect(accountLink.url);
+    } catch (error: any) {
+      console.error('Stripe onboarding error:', error);
+      res.status(500).json({ message: error.message || 'Failed to create Stripe onboarding link' });
     }
   });
 
