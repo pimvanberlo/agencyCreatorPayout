@@ -34,6 +34,16 @@ export function Navigation({ onNewPayment, onNewCreator }: NavigationProps) {
             </div>
           </div>
           <div className="flex items-center space-x-4">
+            {onNewCreator && (
+              <Button 
+                onClick={onNewCreator}
+                variant="outline"
+                className="border-[#28ce73] text-[#28ce73] hover:bg-[#28ce73] hover:text-white font-medium"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Creator
+              </Button>
+            )}
             <Button 
               onClick={onNewPayment}
               className="bg-[#28ce73] hover:bg-[#22b366] text-white font-medium"
