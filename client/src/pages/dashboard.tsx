@@ -39,11 +39,11 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPayments, setSelectedPayments] = useState<number[]>([]);
 
-  const { data: stats } = useQuery<DashboardStats>({
+  const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
   });
 
-  const { data: paymentRequests = [] } = useQuery<PaymentWithCreator[]>({
+  const { data: paymentRequests = [], isLoading: paymentsLoading } = useQuery<PaymentWithCreator[]>({
     queryKey: ["/api/payment-requests"],
   });
 
