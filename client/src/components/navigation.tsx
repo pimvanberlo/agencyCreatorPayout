@@ -23,41 +23,33 @@ export function Navigation({ onNewPayment }: NavigationProps) {
               <span className="text-xl font-semibold text-black">Creator Payout System</span>
             </div>
             <div className="hidden md:flex space-x-6">
-              <Link href="/">
-                <a className={`pb-4 font-medium ${
-                  isActive("/") 
-                    ? "text-black border-b-2 border-[#28ce73]" 
-                    : "text-gray-600 hover:text-black"
-                }`}>
-                  Dashboard
-                </a>
+              <Link href="/" className={`pb-4 font-medium ${
+                isActive("/") 
+                  ? "text-black border-b-2 border-[#28ce73]" 
+                  : "text-gray-600 hover:text-black"
+              }`}>
+                Dashboard
               </Link>
-              <Link href="/creators">
-                <a className={`pb-4 font-medium ${
-                  isActive("/creators") 
-                    ? "text-black border-b-2 border-[#28ce73]" 
-                    : "text-gray-600 hover:text-black"
-                }`}>
-                  Creators
-                </a>
+              <Link href="/creators" className={`pb-4 font-medium ${
+                isActive("/creators") 
+                  ? "text-black border-b-2 border-[#28ce73]" 
+                  : "text-gray-600 hover:text-black"
+              }`}>
+                Creators
               </Link>
-              <Link href="/payments">
-                <a className={`pb-4 font-medium ${
-                  isActive("/payments") 
-                    ? "text-black border-b-2 border-[#28ce73]" 
-                    : "text-gray-600 hover:text-black"
-                }`}>
-                  Payments
-                </a>
+              <Link href="/payments" className={`pb-4 font-medium ${
+                isActive("/payments") 
+                  ? "text-black border-b-2 border-[#28ce73]" 
+                  : "text-gray-600 hover:text-black"
+              }`}>
+                Payments
               </Link>
-              <Link href="/onboarding">
-                <a className={`pb-4 font-medium ${
-                  isActive("/onboarding") 
-                    ? "text-black border-b-2 border-[#28ce73]" 
-                    : "text-gray-600 hover:text-black"
-                }`}>
-                  Onboarding
-                </a>
+              <Link href="/onboarding" className={`pb-4 font-medium ${
+                isActive("/onboarding") 
+                  ? "text-black border-b-2 border-[#28ce73]" 
+                  : "text-gray-600 hover:text-black"
+              }`}>
+                Onboarding
               </Link>
             </div>
           </div>

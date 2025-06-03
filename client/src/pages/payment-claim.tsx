@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { useRoute } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -8,9 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { formatCurrency } from "@/lib/vat-utils";
+import { formatCurrency, calculateVAT, VAT_RATES } from "@/lib/vat-utils";
 import { 
   CheckCircle, 
   AlertCircle, 
@@ -21,18 +27,87 @@ import {
   Calendar,
   Upload,
   FileText,
-  Download
+  Download,
+  ArrowRight,
+  Info
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+
+// Creator information form schema
+const creatorInfoSchema = z.object({
+  fullName: z.string().min(1, "Full name is required"),
+  email: z.string().email("Invalid email address"),
+  country: z.string().min(1, "Please select a country"),
+  businessType: z.enum(["individual", "vat_registered", "vat_exempt"]),
+  vatId: z.string().optional(),
+  companyName: z.string().optional(),
+  invoiceMethod: z.enum(["auto", "manual"]),
+}).refine((data) => {
+  if (data.businessType === 'vat_registered' && !data.vatId) {
+    return false;
+  }
+  return true;
+}, {
+  message: "VAT ID is required for VAT registered businesses",
+  path: ["vatId"],
+});
+
+type CreatorInfoFormData = z.infer<typeof creatorInfoSchema>;
+
+const COUNTRIES = VAT_RATES.map(rate => ({ value: rate.country, label: rate.countryName }));
+
+const BUSINESS_TYPES = [
+  { value: "individual", label: "Individual/Freelancer", description: "Personal freelancer or individual" },
+  { value: "vat_registered", label: "Company (VAT registered)", description: "Company with valid VAT registration" },
+  { value: "vat_exempt", label: "Company (VAT exempt)", description: "Company not subject to VAT" },
+];
 
 export default function PaymentClaim() {
   const [match, params] = useRoute("/claim/:token");
   const [file, setFile] = useState<File | null>(null);
+  const [step, setStep] = useState<'info' | 'claim' | 'complete'>('info');
+  const [creatorInfo, setCreatorInfo] = useState<CreatorInfoFormData | null>(null);
   const { toast } = useToast();
+
+  const form = useForm<CreatorInfoFormData>({
+    resolver: zodResolver(creatorInfoSchema),
+    defaultValues: {
+      fullName: "",
+      email: "",
+      country: "",
+      businessType: "individual",
+      vatId: "",
+      companyName: "",
+      invoiceMethod: "auto",
+    },
+  });
 
   const { data: claimData, isLoading, error } = useQuery({
     queryKey: [`/api/claim/${params?.token}`],
     enabled: !!params?.token,
+  });
+
+  const submitCreatorInfoMutation = useMutation({
+    mutationFn: async (data: CreatorInfoFormData) => {
+      // Create or update creator with the information
+      const response = await apiRequest("POST", "/api/creators", data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setCreatorInfo(form.getValues());
+      setStep('claim');
+      toast({
+        title: "Information Saved",
+        description: "Your information has been saved. You can now proceed with the claim.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const claimPaymentMutation = useMutation({
@@ -41,6 +116,7 @@ export default function PaymentClaim() {
       return response.json();
     },
     onSuccess: () => {
+      setStep('complete');
       toast({
         title: "Payment Claimed",
         description: "You have successfully claimed this payment. You'll receive it once processed.",
@@ -124,6 +200,45 @@ export default function PaymentClaim() {
 
   const { paymentRequest, creator } = claimData;
 
+  // Check if creator already exists - if so, skip info step
+  useEffect(() => {
+    if (creator && step === 'info') {
+      setCreatorInfo({
+        fullName: creator.fullName,
+        email: creator.email,
+        country: creator.country,
+        businessType: creator.businessType,
+        vatId: creator.vatId || "",
+        companyName: creator.companyName || "",
+        invoiceMethod: creator.invoiceMethod,
+      });
+      setStep('claim');
+    }
+  }, [creator, step]);
+
+  // Calculate VAT based on current form data or existing creator data
+  const watchedCountry = form.watch("country");
+  const watchedBusinessType = form.watch("businessType");
+  const activeCreatorInfo = creatorInfo || (creator ? {
+    fullName: creator.fullName,
+    email: creator.email,
+    country: creator.country,
+    businessType: creator.businessType,
+    vatId: creator.vatId || "",
+    companyName: creator.companyName || "",
+    invoiceMethod: creator.invoiceMethod,
+  } : null);
+
+  const vatCalculation = activeCreatorInfo 
+    ? calculateVAT(parseFloat(paymentRequest.amount), activeCreatorInfo.country, activeCreatorInfo.businessType)
+    : watchedCountry && watchedBusinessType
+    ? calculateVAT(parseFloat(paymentRequest.amount), watchedCountry, watchedBusinessType)
+    : null;
+
+  const totalAmount = vatCalculation 
+    ? parseFloat(paymentRequest.amount) + vatCalculation.amount 
+    : parseFloat(paymentRequest.amount);
+
   const getStatusBadge = (status: string) => {
     const variants = {
       pending: { className: "bg-yellow-100 text-yellow-800", icon: AlertCircle },
@@ -172,17 +287,319 @@ export default function PaymentClaim() {
     }
   };
 
+  // Step indicator component
+  const renderStepIndicator = () => (
+    <div className="flex justify-center mb-8">
+      <div className="flex items-center space-x-4">
+        {[
+          { key: 'info', label: 'Your Information', icon: User },
+          { key: 'claim', label: 'Claim Payment', icon: CreditCard },
+          { key: 'complete', label: 'Complete', icon: CheckCircle }
+        ].map((stepItem, index) => {
+          const isActive = step === stepItem.key;
+          const isCompleted = 
+            (stepItem.key === 'info' && (step === 'claim' || step === 'complete')) ||
+            (stepItem.key === 'claim' && step === 'complete');
+          const Icon = stepItem.icon;
+          
+          return (
+            <div key={stepItem.key} className="flex items-center">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
+                isCompleted 
+                  ? "bg-[#28ce73] text-white" 
+                  : isActive
+                  ? "bg-[#28ce73]/20 text-[#28ce73] border-2 border-[#28ce73]"
+                  : "bg-gray-200 text-gray-600"
+              }`}>
+                {isCompleted ? <CheckCircle size={16} /> : <Icon size={16} />}
+              </div>
+              <span className={`ml-2 font-medium ${
+                isActive ? "text-[#28ce73]" : "text-black"
+              }`}>
+                {stepItem.label}
+              </span>
+              {index < 2 && <ArrowRight className="w-4 h-4 text-gray-400 mx-4" />}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  // Creator information step
+  if (step === 'info') {
+    return (
+      <div className="min-h-screen bg-[#f5f5f5]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-[#28ce73] rounded-full flex items-center justify-center mx-auto mb-4">
+              <User className="text-white" size={32} />
+            </div>
+            <h1 className="text-3xl font-bold text-black mb-2">Claim Your Payment</h1>
+            <p className="text-gray-600">Please provide your information to continue</p>
+          </div>
+
+          {renderStepIndicator()}
+
+          <Card className="max-w-2xl mx-auto border border-gray-200">
+            <CardHeader>
+              <CardTitle>Your Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit((data) => submitCreatorInfoMutation.mutate(data))} className="space-y-6">
+                  {/* Basic Information */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-black">Basic Details</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="fullName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Full Name *</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Your full name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email Address *</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="email" placeholder="your@email.com" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Location & Business Type */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-black">Location & Business</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="country"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Country *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select your country" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {COUNTRIES.map((country) => (
+                                  <SelectItem key={country.value} value={country.value}>
+                                    {country.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="businessType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Business Type *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select business type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {BUSINESS_TYPES.map((type) => (
+                                  <SelectItem key={type.value} value={type.value}>
+                                    <div>
+                                      <div className="font-medium">{type.label}</div>
+                                      <div className="text-sm text-gray-600">{type.description}</div>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Conditional VAT/Company Information */}
+                  {(watchedBusinessType === 'vat_registered' || watchedBusinessType === 'vat_exempt') && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-black">Company Information</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="companyName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Company Name *</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Your Company B.V." />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        {watchedBusinessType === 'vat_registered' && (
+                          <FormField
+                            control={form.control}
+                            name="vatId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>VAT ID *</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="e.g., NL123456789B01" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Invoice Method */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-black">Invoice Preference</h3>
+                    <FormField
+                      control={form.control}
+                      name="invoiceMethod"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <RadioGroup
+                              onValueChange={field.onChange}
+                              value={field.value}
+                              className="space-y-3"
+                            >
+                              <div className="flex items-start p-4 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                <RadioGroupItem value="auto" id="auto" className="mt-1" />
+                                <Label htmlFor="auto" className="ml-4 cursor-pointer">
+                                  <div className="font-medium text-black">Auto-generate invoice</div>
+                                  <p className="text-sm text-gray-600">
+                                    We'll create a professional invoice for you automatically
+                                  </p>
+                                </Label>
+                              </div>
+                              <div className="flex items-start p-4 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                <RadioGroupItem value="manual" id="manual" className="mt-1" />
+                                <Label htmlFor="manual" className="ml-4 cursor-pointer">
+                                  <div className="font-medium text-black">Upload my own invoice</div>
+                                  <p className="text-sm text-gray-600">
+                                    I'll provide my own PDF invoice (will be validated by AI)
+                                  </p>
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* VAT Preview */}
+                  {vatCalculation && watchedCountry && (
+                    <Alert className="bg-blue-50 border-blue-200">
+                      <Info className="text-blue-600" size={16} />
+                      <AlertDescription className="text-blue-800">
+                        <strong>VAT Calculation Preview:</strong> {vatCalculation.note}<br />
+                        Payment: {formatCurrency(parseFloat(paymentRequest.amount))} + VAT: {formatCurrency(vatCalculation.amount)} = Total: {formatCurrency(totalAmount)}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div className="flex justify-end">
+                    <Button
+                      type="submit"
+                      disabled={submitCreatorInfoMutation.isPending}
+                      className="bg-[#28ce73] hover:bg-[#22b366] text-white px-8"
+                    >
+                      {submitCreatorInfoMutation.isPending ? "Saving..." : "Continue"}
+                      <ArrowRight className="ml-2" size={16} />
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Payment complete step
+  if (step === 'complete') {
+    return (
+      <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center p-4">
+        <Card className="max-w-2xl w-full border border-gray-200">
+          <CardContent className="p-8 text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="text-green-600" size={32} />
+            </div>
+            <h1 className="text-2xl font-bold text-black mb-4">Payment Claimed Successfully!</h1>
+            <p className="text-gray-600 mb-6">
+              Your payment has been claimed and will be processed. You'll receive the funds once the admin approves the payment.
+            </p>
+            {activeCreatorInfo?.invoiceMethod === 'manual' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-blue-800">
+                  Don't forget to upload your invoice if you haven't already. The payment will be processed once your invoice is validated.
+                </p>
+              </div>
+            )}
+            <div className="space-y-3">
+              <Button
+                onClick={() => window.close()}
+                className="w-full bg-[#28ce73] hover:bg-[#22b366] text-white"
+              >
+                Close Window
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full border-gray-300 text-black hover:bg-gray-50"
+                onClick={() => setStep('claim')}
+              >
+                View Payment Details
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Default claim step with payment details and invoice upload
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-[#28ce73] rounded-full flex items-center justify-center mx-auto mb-4">
             <CreditCard className="text-white" size={32} />
           </div>
-          <h1 className="text-3xl font-bold text-black mb-2">Payment Claim</h1>
-          <p className="text-gray-600">Review and claim your payment</p>
+          <h1 className="text-3xl font-bold text-black mb-2">Claim Payment</h1>
+          <p className="text-gray-600">Review your payment details and submit your claim</p>
         </div>
+
+        {renderStepIndicator()}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
@@ -229,50 +646,52 @@ export default function PaymentClaim() {
             </Card>
 
             {/* Creator Information */}
-            <Card className="border border-gray-200">
-              <CardHeader>
-                <CardTitle>Creator Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                    <User className="text-gray-600" size={20} />
+            {activeCreatorInfo && (
+              <Card className="border border-gray-200">
+                <CardHeader>
+                  <CardTitle>Your Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                      <User className="text-gray-600" size={20} />
+                    </div>
+                    <div>
+                      <p className="font-medium text-black">{activeCreatorInfo.fullName}</p>
+                      <p className="text-gray-600">{activeCreatorInfo.email}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-black">{creator.fullName}</p>
-                    <p className="text-gray-600">{creator.email}</p>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center">
-                    <MapPin className="mr-2 text-gray-600" size={16} />
-                    <span className="text-black">{creator.country}</span>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center">
+                      <MapPin className="mr-2 text-gray-600" size={16} />
+                      <span className="text-black">{COUNTRIES.find(c => c.value === activeCreatorInfo.country)?.label}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Building className="mr-2 text-gray-600" size={16} />
+                      <span className="text-black capitalize">{activeCreatorInfo.businessType.replace('_', ' ')}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <Building className="mr-2 text-gray-600" size={16} />
-                    <span className="text-black capitalize">{creator.businessType.replace('_', ' ')}</span>
-                  </div>
-                </div>
 
-                {creator.companyName && (
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Company</Label>
-                    <p className="text-black">{creator.companyName}</p>
-                  </div>
-                )}
+                  {activeCreatorInfo.companyName && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">Company</Label>
+                      <p className="text-black">{activeCreatorInfo.companyName}</p>
+                    </div>
+                  )}
 
-                {creator.vatId && (
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">VAT ID</Label>
-                    <p className="text-black font-mono">{creator.vatId}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  {activeCreatorInfo.vatId && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">VAT ID</Label>
+                      <p className="text-black font-mono">{activeCreatorInfo.vatId}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Invoice Upload/Management */}
-            {creator.invoiceMethod === 'manual' && paymentRequest.status === 'pending' && (
+            {activeCreatorInfo?.invoiceMethod === 'manual' && paymentRequest.status === 'pending' && (
               <Card className="border border-gray-200">
                 <CardHeader>
                   <CardTitle>Invoice Upload</CardTitle>
@@ -281,8 +700,7 @@ export default function PaymentClaim() {
                   <Alert className="bg-blue-50 border-blue-200">
                     <FileText className="text-blue-600" size={16} />
                     <AlertDescription className="text-blue-800">
-                      Please upload your invoice for this payment. Our AI system will validate 
-                      that it matches the payment amount and details.
+                      Please upload your invoice for this payment. Our AI system will validate that it matches the payment amount and details.
                     </AlertDescription>
                   </Alert>
 
@@ -337,17 +755,19 @@ export default function PaymentClaim() {
                       {formatCurrency(parseFloat(paymentRequest.amount))}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">VAT ({paymentRequest.vatRate}%):</span>
-                    <span className="text-black font-medium">
-                      {formatCurrency(parseFloat(paymentRequest.vatAmount))}
-                    </span>
-                  </div>
+                  {vatCalculation && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">VAT ({vatCalculation.rate}%):</span>
+                      <span className="text-black font-medium">
+                        {formatCurrency(vatCalculation.amount)}
+                      </span>
+                    </div>
+                  )}
                   <Separator />
                   <div className="flex justify-between text-lg font-semibold">
                     <span className="text-black">Total Amount:</span>
                     <span className="text-black">
-                      {formatCurrency(parseFloat(paymentRequest.totalAmount))}
+                      {formatCurrency(totalAmount)}
                     </span>
                   </div>
                 </div>
@@ -376,7 +796,7 @@ export default function PaymentClaim() {
                   <Alert className="bg-green-50 border-green-200">
                     <CheckCircle className="text-green-600" size={16} />
                     <AlertDescription className="text-green-800">
-                      Payment completed! The funds have been transferred to your Stripe account.
+                      Payment completed! The funds have been transferred to your account.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -390,8 +810,7 @@ export default function PaymentClaim() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-gray-600">
-                  If you have questions about this payment or need assistance, 
-                  our support team is here to help.
+                  If you have questions about this payment or need assistance, our support team is here to help.
                 </p>
                 <div className="space-y-2">
                   <Button variant="outline" size="sm" className="w-full border-gray-300 text-black hover:bg-gray-50">
