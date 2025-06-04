@@ -34,7 +34,11 @@ export interface IStorage {
   createPaymentRequest(request: InsertPaymentRequest): Promise<PaymentRequest>;
   updatePaymentRequest(id: number, updates: Partial<PaymentRequest>): Promise<PaymentRequest>;
   listPaymentRequests(limit?: number, offset?: number, status?: string): Promise<PaymentRequest[]>;
-  getPaymentRequestsWithCreators(): Promise<(PaymentRequest & { creator: Creator })[]>;
+  getPaymentRequestsWithCreators(
+    limit?: number,
+    offset?: number,
+    status?: string,
+  ): Promise<(PaymentRequest & { creator: Creator })[]>;
   
   // Invoice operations
   getInvoice(id: number): Promise<Invoice | undefined>;
@@ -150,14 +154,26 @@ export class DatabaseStorage implements IStorage {
     return await baseQuery;
   }
 
-  async getPaymentRequestsWithCreators(): Promise<(PaymentRequest & { creator: Creator })[]> {
-    const results = await db
+  async getPaymentRequestsWithCreators(
+    limit = 50,
+    offset = 0,
+    status?: string,
+  ): Promise<(PaymentRequest & { creator: Creator })[]> {
+    const baseQuery = db
       .select()
       .from(paymentRequests)
-      .innerJoin(creators, eq(paymentRequests.creatorId, creators.id))
-      .orderBy(desc(paymentRequests.createdAt));
+      .innerJoin(creators, eq(paymentRequests.creatorId, creators.id));
 
-    return results.map(result => ({
+    const queryWithStatus = status
+      ? baseQuery.where(eq(paymentRequests.status, status))
+      : baseQuery;
+
+    const results = await queryWithStatus
+      .orderBy(desc(paymentRequests.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return results.map((result) => ({
       ...result.payment_requests,
       creator: result.creators,
     }));
