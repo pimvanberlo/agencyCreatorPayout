@@ -1,84 +1,101 @@
 export interface VATRate {
   country: string;
-  rate: number;
   countryName: string;
+  isEU: boolean;
 }
 
 export const VAT_RATES: VATRate[] = [
-  { country: 'AT', rate: 0.20, countryName: 'Austria' },
-  { country: 'BE', rate: 0.21, countryName: 'Belgium' },
-  { country: 'BG', rate: 0.20, countryName: 'Bulgaria' },
-  { country: 'HR', rate: 0.25, countryName: 'Croatia' },
-  { country: 'CY', rate: 0.19, countryName: 'Cyprus' },
-  { country: 'CZ', rate: 0.21, countryName: 'Czech Republic' },
-  { country: 'DK', rate: 0.25, countryName: 'Denmark' },
-  { country: 'EE', rate: 0.20, countryName: 'Estonia' },
-  { country: 'FI', rate: 0.24, countryName: 'Finland' },
-  { country: 'FR', rate: 0.20, countryName: 'France' },
-  { country: 'DE', rate: 0.19, countryName: 'Germany' },
-  { country: 'GR', rate: 0.24, countryName: 'Greece' },
-  { country: 'HU', rate: 0.27, countryName: 'Hungary' },
-  { country: 'IE', rate: 0.23, countryName: 'Ireland' },
-  { country: 'IT', rate: 0.22, countryName: 'Italy' },
-  { country: 'LV', rate: 0.21, countryName: 'Latvia' },
-  { country: 'LT', rate: 0.21, countryName: 'Lithuania' },
-  { country: 'LU', rate: 0.17, countryName: 'Luxembourg' },
-  { country: 'MT', rate: 0.18, countryName: 'Malta' },
-  { country: 'NL', rate: 0.21, countryName: 'Netherlands' },
-  { country: 'PL', rate: 0.23, countryName: 'Poland' },
-  { country: 'PT', rate: 0.23, countryName: 'Portugal' },
-  { country: 'RO', rate: 0.19, countryName: 'Romania' },
-  { country: 'SK', rate: 0.20, countryName: 'Slovakia' },
-  { country: 'SI', rate: 0.22, countryName: 'Slovenia' },
-  { country: 'ES', rate: 0.21, countryName: 'Spain' },
-  { country: 'SE', rate: 0.25, countryName: 'Sweden' },
-  // Non-EU countries (no VAT for non-EU businesses)
-  { country: 'US', rate: 0.00, countryName: 'United States' },
-  { country: 'GB', rate: 0.00, countryName: 'United Kingdom' },
-  { country: 'CA', rate: 0.00, countryName: 'Canada' },
-  { country: 'AU', rate: 0.00, countryName: 'Australia' },
-  { country: 'JP', rate: 0.00, countryName: 'Japan' },
-  { country: 'SG', rate: 0.00, countryName: 'Singapore' },
-  { country: 'CH', rate: 0.00, countryName: 'Switzerland' },
-  { country: 'NO', rate: 0.00, countryName: 'Norway' },
+  // EU Countries
+  { country: 'AT', countryName: 'Austria', isEU: true },
+  { country: 'BE', countryName: 'Belgium', isEU: true },
+  { country: 'BG', countryName: 'Bulgaria', isEU: true },
+  { country: 'HR', countryName: 'Croatia', isEU: true },
+  { country: 'CY', countryName: 'Cyprus', isEU: true },
+  { country: 'CZ', countryName: 'Czech Republic', isEU: true },
+  { country: 'DK', countryName: 'Denmark', isEU: true },
+  { country: 'EE', countryName: 'Estonia', isEU: true },
+  { country: 'FI', countryName: 'Finland', isEU: true },
+  { country: 'FR', countryName: 'France', isEU: true },
+  { country: 'DE', countryName: 'Germany', isEU: true },
+  { country: 'GR', countryName: 'Greece', isEU: true },
+  { country: 'HU', countryName: 'Hungary', isEU: true },
+  { country: 'IE', countryName: 'Ireland', isEU: true },
+  { country: 'IT', countryName: 'Italy', isEU: true },
+  { country: 'LV', countryName: 'Latvia', isEU: true },
+  { country: 'LT', countryName: 'Lithuania', isEU: true },
+  { country: 'LU', countryName: 'Luxembourg', isEU: true },
+  { country: 'MT', countryName: 'Malta', isEU: true },
+  { country: 'NL', countryName: 'Netherlands', isEU: true },
+  { country: 'PL', countryName: 'Poland', isEU: true },
+  { country: 'PT', countryName: 'Portugal', isEU: true },
+  { country: 'RO', countryName: 'Romania', isEU: true },
+  { country: 'SK', countryName: 'Slovakia', isEU: true },
+  { country: 'SI', countryName: 'Slovenia', isEU: true },
+  { country: 'ES', countryName: 'Spain', isEU: true },
+  { country: 'SE', countryName: 'Sweden', isEU: true },
+  // Non-EU Countries
+  { country: 'US', countryName: 'United States', isEU: false },
+  { country: 'GB', countryName: 'United Kingdom', isEU: false },
+  { country: 'CA', countryName: 'Canada', isEU: false },
+  { country: 'AU', countryName: 'Australia', isEU: false },
+  { country: 'JP', countryName: 'Japan', isEU: false },
+  { country: 'SG', countryName: 'Singapore', isEU: false },
+  { country: 'CH', countryName: 'Switzerland', isEU: false },
+  { country: 'NO', countryName: 'Norway', isEU: false },
+  { country: 'IN', countryName: 'India', isEU: false },
+  { country: 'BR', countryName: 'Brazil', isEU: false },
 ];
 
-export function calculateVAT(amount: number, country: string, businessType: string) {
-  const vatRate = VAT_RATES.find(rate => rate.country === country);
-  
-  if (!vatRate) {
-    // Default to no VAT for unknown countries
+// EU country codes for quick lookup
+const EU_COUNTRY_CODES: ReadonlySet<string> = new Set([
+  "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", 
+  "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV", 
+  "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", 
+  "SI", "ES", "SE"
+]);
+
+export function calculateVAT(amount: number, countryCode: string, businessType: string) {
+  const isDutchVatRegistered = countryCode === 'NL' && businessType === 'vat_registered';
+  const isEUNonDutchVatRegistered = 
+    EU_COUNTRY_CODES.has(countryCode) && 
+    countryCode !== 'NL' && 
+    businessType === 'vat_registered';
+
+  // Scenario 1: Dutch VAT registered companies - 21% VAT
+  if (isDutchVatRegistered) {
+    const rate = 0.21; // 21% VAT
+    const vatAmount = amount * rate;
+    return {
+      rate: rate,
+      amount: vatAmount,
+      total: amount + vatAmount,
+      isEUVATShift: false,
+      note: "Dutch VAT (21%) applied."
+    };
+  }
+
+  // Scenario 2: EU (except Dutch) VAT registered companies - VAT shifted
+  if (isEUNonDutchVatRegistered) {
     return {
       rate: 0,
       amount: 0,
       total: amount,
-      isEUVATShift: false
+      isEUVATShift: true,
+      note: "EU VAT reverse charge (VAT shifted)."
     };
   }
 
-  // VAT shift logic for EU B2B transactions
-  const isEU = vatRate.rate > 0;
-  const isB2B = businessType === 'company';
-  const isEUVATShift = isEU && isB2B;
-
-  if (isEUVATShift) {
-    // EU VAT shift - no VAT charged by payer
-    return {
-      rate: 0,
-      amount: 0,
-      total: amount,
-      isEUVATShift: true
-    };
-  }
-
-  // Regular VAT calculation
-  const vatAmount = amount * vatRate.rate;
-  
+  // Scenario 3: Outside EU companies, VAT exempt companies, or individuals - No VAT
+  // This covers:
+  // - Non-EU companies (businessType === 'vat_registered' but countryCode is not in EU)
+  // - All 'vat_exempt' companies (regardless of country)
+  // - All 'individual's (regardless of country)
   return {
-    rate: vatRate.rate,
-    amount: vatAmount,
-    total: amount + vatAmount,
-    isEUVATShift: false
+    rate: 0,
+    amount: 0,
+    total: amount,
+    isEUVATShift: false,
+    note: "No VAT applicable."
   };
 }
 

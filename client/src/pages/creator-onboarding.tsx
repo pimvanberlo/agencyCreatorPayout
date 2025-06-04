@@ -18,7 +18,7 @@ import { VAT_RATES } from "@shared/vat-utils";
 
 const businessDetailsSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
-  businessType: z.enum(["individual", "company"], {
+  businessType: z.enum(["individual", "vat_registered", "vat_exempt"], {
     required_error: "Please select your business type",
   }),
   country: z.string().min(1, "Country is required"),
@@ -29,6 +29,14 @@ const businessDetailsSchema = z.object({
   invoiceMethod: z.enum(["upload", "generate"], {
     required_error: "Please select an invoice method",
   }),
+}).refine((data) => {
+  if (data.businessType === 'vat_registered' && !data.vatNumber) {
+    return false;
+  }
+  return true;
+}, {
+  message: "VAT number is required for VAT registered businesses",
+  path: ["vatNumber"],
 });
 
 type BusinessDetailsFormData = z.infer<typeof businessDetailsSchema>;
