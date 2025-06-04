@@ -338,7 +338,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const offset = parseInt(req.query.offset as string) || 0;
       const status = req.query.status as string;
       
-      const requests = await storage.getPaymentRequestsWithCreators();
+      const requests = await storage.getPaymentRequestsWithCreators(
+        limit,
+        offset,
+        status,
+      );
       res.json(requests);
     } catch (error: any) {
       res.status(500).json({ message: error.message || 'Failed to fetch payment requests' });
